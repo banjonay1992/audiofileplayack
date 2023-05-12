@@ -1,0 +1,105 @@
+// Select both audio and video tags on the page
+const mediaTags = document.querySelectorAll('audio, video');
+
+// Set the default playback rate to 1
+let defaultPlaybackRate = 1;
+
+// Add a slider UI component to allow precise speed adjustment
+const slider = document.createElement('input');
+slider.type = 'range';
+slider.min = 0.5;
+slider.max = 2;
+slider.step = 0.05;
+slider.value = defaultPlaybackRate;
+slider.style.width = '200px';
+slider.style.marginLeft = '10px';
+slider.style.verticalAlign = 'middle';
+
+// Add a reset button to quickly return the playback speed to its default value
+const resetButton = document.createElement('button');
+resetButton.textContent = 'Reset';
+resetButton.style.marginLeft = '10px';
+resetButton.style.verticalAlign = 'middle';
+
+// Add a favorites feature that allows users to save their favorite playback speeds
+const favorites = {};
+
+function saveFavoriteSpeed(url, speed) {
+  favorites[url] = speed;
+}
+
+function loadFavoriteSpeed(url) {
+  return favorites[url];
+}
+
+// Add a feature that remembers the playback speed setting for each website
+function savePlaybackRate(url, rate) {
+  localStorage.setItem(url, rate);
+}
+
+function loadPlaybackRate(url) {
+  return parseFloat(localStorage.getItem(url)) || defaultPlaybackRate;
+}
+
+mediaTags.forEach(mediaTag => {
+  const url = mediaTag.src || mediaTag.currentSrc;
+  const savedPlaybackRate = loadPlaybackRate(url);
+  mediaTag.playbackRate = savedPlaybackRate;
+  const savedFavoriteSpeed = loadFavoriteSpeed(url);
+  if (savedFavoriteSpeed) {
+    slider.value = savedFavoriteSpeed;
+  }
+});
+
+slider.addEventListener('input', () => {
+  const speed = parseFloat(slider.value);
+  mediaTags.forEach(mediaTag => {
+    mediaTag.playbackRate = speed;
+    const url = mediaTag.src || mediaTag.currentSrc;
+    savePlaybackRate(url, speed);
+    saveFavoriteSpeed(url, speed);
+  });
+});
+
+resetButton.addEventListener('click', () => {
+  slider.value = defaultPlaybackRate;
+  slider.dispatchEvent(new Event('input'));
+});
+
+// Add a notification feature that displays a message when the playback speed is changed
+function showNotification(message) {
+  const notification = document.createElement('div');
+  notification.textContent = message;
+  notification.style.position = 'fixed';
+  notification.style.bottom = '20px';
+  notification.style.right = '20px';
+  notification.style.padding = '10px';
+  notification.style.backgroundColor = 'white';
+  notification.style.border = '1px solid black';
+  document.body.appendChild(notification);
+  setTimeout(() => {
+    document.body.removeChild(notification);
+  }, 2000);
+}
+
+// Add a feature that adjusts the pitch of the audio when slowing down or speeding up playback
+function adjustPitch(mediaTag, speed) {
+  const pitch = 1 / speed;
+  mediaTag.playbackRate = speed;
+  mediaTag.playbackRatePitchCorrection = pitch;
+}
+
+// Add a feature that allows users to exclude specific websites from the extension's functionality
+const excludedUrls = ['https://example.com', 'https://www.example.com'];
+mediaTags.forEach(mediaTag => {
+  const url = mediaTag.src || mediaTag.currentSrc;
+  if (excludedUrls.includes(url)) {
+    return;
+  }
+  
+  // Add keyboard shortcuts to adjust playback speed
+  document.addEventListener('keydown', (event) => {
+    if (event.code === 'KeyS') {
+      adjustPitch(mediaTag, defaultPlaybackRate - 0.1);
+      showNotification(`Playback speed slowed down to ${mediaTag.playbackRate.toFixed(2)}x`);
+    }
